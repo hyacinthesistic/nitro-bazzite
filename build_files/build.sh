@@ -25,3 +25,27 @@ dnf5 install -y tmux
 #### Example for enabling a System Unit File
 
 systemctl enable podman.socket
+
+### Linuwu-Sense (Acer WMI driver), built against the kernel inside this image
+LINUWU_COMMIT="4483b6c38b9bb963ac9ada9ca476578e0c63cc08"
+
+KVER="$(ls -1 /usr/lib/modules)"
+if [[ "$(wc -l <<< "${KVER}")" -ne 1 ]]; then
+    echo "Expected exactly one kernel in /usr/lib/modules, found: ${KVER}"
+    exit 1
+fi
+if [[ ! -d "/usr/src/kernels/${KVER}" ]]; then
+    echo "kernel-devel for ${KVER} not found"
+    exit 1
+fi
+
+mkdir -p /tmp/linuwu
+curl -fsSL "https://github.com/0x7375646F/Linuwu-Sense/archive/${LINUWU_COMMIT}.tar.gz" \
+    | tar -xz -C /tmp/linuwu --strip-components=1
+
+(cd /tmp/linuwu && make KVER="${KVER}" KDIR="/usr/src/kernels/${KVER}")
+
+install -Dm0644 /tmp/linuwu/src/linuwu_sense.ko "/usr/lib/modules/${KVER}/extra/linuwu_sense.ko"
+depmod -a "${KVER}"
+modinfo -k "${KVER}" -F vermagic linuwu_sense
+rm -rf /tmp/linuwu
