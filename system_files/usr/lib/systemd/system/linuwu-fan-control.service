@@ -1,0 +1,15 @@
+[Unit]
+Description=Temperature-based fan control (Acer Nitro, linuwu_sense)
+After=systemd-modules-load.service
+Wants=systemd-modules-load.service
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/linuwu-fan-control
+Restart=on-failure
+RestartSec=5
+# If the script is ever killed hard, hand the fan back to the firmware
+ExecStopPost=/usr/bin/bash -c 'echo 0,0 > /sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/nitro_sense/fan_speed || true'
+
+[Install]
+WantedBy=multi-user.target

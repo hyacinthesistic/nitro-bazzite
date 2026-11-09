@@ -59,3 +59,8 @@ install -Dm0644 /tmp/linuwu/src/linuwu_sense.ko "/usr/lib/modules/${KVER}/extra/
 depmod -a "${KVER}"
 modinfo -k "${KVER}" -F vermagic linuwu_sense
 rm -rf /tmp/linuwu
+
+### Temperature-based fan control service (FEATURE TESTING, WILL REMOVE IF IT DOESN'T WORK)
+chmod 0755 /usr/libexec/linuwu-fan-control
+bash -n /usr/libexec/linuwu-fan-control
+systemctl enable linuwu-fan-control.service

@@ -1,0 +1,78 @@
+#!/usr/bin/bash
+# Temperature-based fan control for Acer Nitro laptops (TESTING).
+# FAN_DRY_RUN=1 prints instead of writing. FAN_TEMP_FILE=<file> reads a fake temp (C).
+set -u
+
+FAN=/sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/nitro_sense/fan_speed
+INTERVAL="${FAN_INTERVAL:-3}"
+DRY_RUN="${FAN_DRY_RUN:-0}"
+
+UP=(65 75 85)                            # go up a level at these temps (C)
+DOWN=(60 70 80)                          # come back down below these (hysteresis)
+SPEED=("0,0" "50,50" "70,70" "100,100")  # level 0 = firmware auto
+
+set_fan() {
+    if [[ "$DRY_RUN" == "1" ]]; then
+        echo "[dry-run] fan_speed <- $1"
+    else
+        echo "$1" > "$FAN" || echo "write to fan_speed failed" >&2
+    fi
+}
+
+trap 'exit 0' TERM INT
+trap 'set_fan "0,0"' EXIT
+
+cpu_temp() {
+    local d t v max=-1
+    for d in /sys/class/hwmon/hwmon*; do
+        [[ -r "$d/name" && "$(<"$d/name")" == "coretemp" ]] || continue
+        for t in "$d"/temp*_input; do
+            [[ -r "$t" ]] || continue
+            v=$(( $(<"$t") / 1000 ))
+            (( v > max )) && max=$v
+        done
+    done
+    (( max >= 0 )) || return 1
+    echo "$max"
+}
+
+gpu_temp() {
+    local dev
+    for dev in /sys/bus/pci/devices/*; do
+        [[ "$(<"$dev/vendor")" == "0x10de" && "$(<"$dev/class")" == 0x03* ]] || continue
+        # don't wake a sleeping dGPU just to read its temperature
+        [[ "$(<"$dev/power/runtime_status")" == "active" ]] || { echo 0; return 0; }
+        nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1
+        return 0
+    done
+    echo 0
+}
+
+if [[ "$DRY_RUN" != "1" ]]; then
+    for _ in $(seq 1 30); do [[ -w "$FAN" ]] && break; sleep 1; done
+    [[ -w "$FAN" ]] || { echo "fan_speed not available, exiting" >&2; exit 0; }
+fi
+
+level=-1
+while true; do
+    if [[ -n "${FAN_TEMP_FILE:-}" ]]; then
+        temp="$(<"$FAN_TEMP_FILE")"
+    elif cpu="$(cpu_temp)"; then
+        gpu="$(gpu_temp)"; gpu="${gpu:-0}"
+        temp=$(( cpu > gpu ? cpu : gpu ))
+    else
+        temp=999    # can't read the CPU sensor: fail safe, treat as hot
+    fi
+
+    target=$level
+    (( target < 0 )) && target=0
+    while (( target < 3 && temp >= UP[target] )); do target=$((target + 1)); done
+    while (( target > 0 && temp < DOWN[target - 1] )); do target=$((target - 1)); done
+
+    if (( target != level )); then
+        level=$target
+        set_fan "${SPEED[$level]}"
+        echo "temp=${temp}C -> level ${level} (${SPEED[$level]})"
+    fi
+    sleep "$INTERVAL"
+done
