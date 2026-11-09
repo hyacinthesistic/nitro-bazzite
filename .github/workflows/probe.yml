@@ -13,17 +13,19 @@ jobs:
         run: |
           BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable
           podman pull "$BASE"
+          KVER=$(podman run --rm "$BASE" bash -c 'ls /usr/lib/modules | head -n1')
           FEDORA_VER=$(podman run --rm "$BASE" bash -c '. /etc/os-release; echo $VERSION_ID')
-          AKMODS="ghcr.io/ublue-os/akmods:bazzite-${FEDORA_VER}"
-          echo "Fedora: ${FEDORA_VER}  akmods image: ${AKMODS}"
+          AKMODS="ghcr.io/ublue-os/akmods:ogc-${FEDORA_VER}-${KVER}"
+          echo "Kernel: ${KVER}"
+          echo "Fedora: ${FEDORA_VER}"
+          echo "akmods image: ${AKMODS}"
+          skopeo list-tags docker://ghcr.io/ublue-os/akmods | grep "ogc-${FEDORA_VER}" | sort -V | tail -n 5 || true
           podman pull "$AKMODS"
 
           cat > /tmp/probe.sh <<'EOF'
           set -x
           KVER="$(ls /usr/lib/modules | head -n1)"
           echo "KVER=${KVER}"
-          rpm -qa 'kernel*' | sort
-          find /akmods -maxdepth 2 | head -60
           ls /akmods/kernel-rpms/ | grep -E 'kernel-(devel|core)'
           dnf5 -y install gcc make git /akmods/kernel-rpms/kernel-devel-"${KVER}".rpm
           ls -d /usr/src/kernels/*
