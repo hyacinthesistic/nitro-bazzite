@@ -1,0 +1,42 @@
+name: Probe module build
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
+
+      - name: Try compiling Linuwu-Sense against the Bazzite kernel
+        run: |
+          BASE=ghcr.io/ublue-os/bazzite-nvidia-open:stable
+          podman pull "$BASE"
+          FEDORA_VER=$(podman run --rm "$BASE" bash -c '. /etc/os-release; echo $VERSION_ID')
+          AKMODS="ghcr.io/ublue-os/akmods:bazzite-${FEDORA_VER}"
+          echo "Fedora: ${FEDORA_VER}  akmods image: ${AKMODS}"
+          podman pull "$AKMODS"
+
+          cat > /tmp/probe.sh <<'EOF'
+          set -x
+          KVER="$(ls /usr/lib/modules | head -n1)"
+          echo "KVER=${KVER}"
+          rpm -qa 'kernel*' | sort
+          find /akmods -maxdepth 2 | head -60
+          ls /akmods/kernel-rpms/ | grep -E 'kernel-(devel|core)'
+          dnf5 -y install gcc make git /akmods/kernel-rpms/kernel-devel-"${KVER}".rpm
+          ls -d /usr/src/kernels/*
+          ls -l /usr/src/kernels/"${KVER}"/scripts/sign-file
+          git clone https://github.com/0x7375646F/Linuwu-Sense.git /tmp/linuwu
+          cd /tmp/linuwu
+          git checkout 4483b6c38b9bb963ac9ada9ca476578e0c63cc08
+          make KVER="${KVER}" KDIR=/usr/src/kernels/"${KVER}"
+          ls -l src/linuwu_sense.ko
+          modinfo src/linuwu_sense.ko
+          EOF
+
+          podman run --rm \
+            --mount=type=image,src="$AKMODS",target=/akmods \
+            -v /tmp/probe.sh:/probe.sh:ro,Z \
+            "$BASE" bash /probe.sh
