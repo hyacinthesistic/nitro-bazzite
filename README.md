@@ -18,7 +18,7 @@ and test carefully.
 
 Using the signed module under Secure Boot means enrolling my signing
 certificate, which gives my key the ability to sign code that loads into
-your kernel. Don't do it. Instead, fork this repo (or the ublue image-template),
+your kernel. Don't do that. Instead fork this repo (or the ublue image-template),
 generate your own keys, and build your own image.
 
 This repository is provided as-is, with no warranty.

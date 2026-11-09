@@ -97,6 +97,7 @@ build $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
 
     set -euox pipefail
+
     BUILD_ARGS=()
     LABELS=()
     if [[ -n "${LINUWU_SIGNING_KEY:+x}" ]]; then

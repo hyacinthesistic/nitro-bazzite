@@ -76,7 +76,6 @@ jobs:
             ${IMAGE_NAME} \
             ${DEFAULT_TAG}
             
-
       # This is optional, this provides smaller delta updates
       - name: Rechunk with rpm-ostree
         id: rechunk
