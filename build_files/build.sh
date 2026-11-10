@@ -12,9 +12,16 @@ cp -avf "/ctx/system_files"/. /
 # List of rpmfusion packages can be found here:
 # https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
 
-# this installs a package from fedora repos
+# this installs packages from fedora repos
 dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
-dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en libreoffice-dict-en-US discord
+dnf5 install -y --allowerasing tmux kitty krita keepassxc libreoffice libreoffice-langpack-en libreoffice-dict-en-US
+
+# terra packages (terra enabled for this command only)
+dnf5 install -y --allowerasing --enablerepo=terra discord prismlauncher
+
+# this installs fonts from fedora and terra repos
+dnf5 install -y --allowerasing --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts
+
 
 # enable services
 systemctl enable tuned tuned-ppd earlyoom
