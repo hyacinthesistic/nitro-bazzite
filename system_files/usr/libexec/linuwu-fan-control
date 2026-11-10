@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# Temperature-based fan control for Acer Nitro laptops (TESTING).
+# Temperature-based fan control for Acer Nitro laptops
 # FAN_DRY_RUN=1 prints instead of writing. FAN_TEMP_FILE=<file> reads a fake temp (C).
 set -u
 

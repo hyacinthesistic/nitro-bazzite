@@ -65,7 +65,7 @@ depmod -a "${KVER}"
 modinfo -k "${KVER}" -F vermagic linuwu_sense
 rm -rf /tmp/linuwu
 
-### Temperature-based fan control service (FEATURE TESTING, WILL REMOVE IF IT DOESN'T WORK)
+### Temperature-based fan control service
 chmod 0755 /usr/libexec/linuwu-fan-control
 bash -n /usr/libexec/linuwu-fan-control
 systemctl enable linuwu-fan-control.service
