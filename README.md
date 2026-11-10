@@ -4,7 +4,7 @@
 > Upstream Linuwu-Sense only lists one model as fully supported, and this
 > image is built for the Acer Nitro ANV15-51-519K only.
 
-**Status:** work in progress, not yet verified on real hardware. 
+**Status:** work in progress, now verified on the Acer Nitro ANV15-51-519K.
 
 ## What this is?
 

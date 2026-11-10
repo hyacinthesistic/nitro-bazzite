@@ -14,6 +14,11 @@ cp -avf "/ctx/system_files"/. /
 
 # this installs a package from fedora repos
 dnf5 install -y tmux kitty
+dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
+dnf5 install -y --enablerepo=terra discord
+
+# enable services
+systemctl enable tuned tuned-ppd earlyoom
 
 # Use a COPR Example:
 #
