@@ -13,9 +13,8 @@ cp -avf "/ctx/system_files"/. /
 # https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
 
 # this installs a package from fedora repos
-dnf5 install -y tmux kitty
 dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
-dnf5 install -y --enablerepo=terra discord
+dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en libreoffice-dict-en-US discord
 
 # enable services
 systemctl enable tuned tuned-ppd earlyoom
@@ -69,3 +68,6 @@ rm -rf /tmp/linuwu
 chmod 0755 /usr/libexec/linuwu-fan-control
 bash -n /usr/libexec/linuwu-fan-control
 systemctl enable linuwu-fan-control.service
+
+# enable terra repo permanently
+dnf5 config-manager setopt terra.enabled=1

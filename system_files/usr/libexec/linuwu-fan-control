@@ -15,7 +15,7 @@ set_fan() {
     if [[ "$DRY_RUN" == "1" ]]; then
         echo "[dry-run] fan_speed <- $1"
     else
-        echo "$1" > "$FAN" || echo "write to fan_speed failed" >&2
+        echo "$1" > "$FAN" || { echo "write to fan_speed failed" >&2; return 1; }
     fi
 }
 
@@ -42,7 +42,7 @@ gpu_temp() {
         [[ "$(<"$dev/vendor")" == "0x10de" && "$(<"$dev/class")" == 0x03* ]] || continue
         # don't wake a sleeping dGPU just to read its temperature
         [[ "$(<"$dev/power/runtime_status")" == "active" ]] || { echo 0; return 0; }
-        nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1
+        timeout 2 nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1
         return 0
     done
     echo 0
@@ -54,7 +54,18 @@ if [[ "$DRY_RUN" != "1" ]]; then
 fi
 
 level=-1
+last=$(date +%s)
 while true; do
+    # The wall clock keeps running during suspend, so a big gap means we slept.
+    # The firmware may have reset the fan on resume: forget the cached level
+    # so the current one gets written again.
+    now=$(date +%s)
+    if (( now - last > INTERVAL + 10 )); then
+        level=-1
+        echo "resume detected, re-asserting fan level"
+    fi
+    last=$now
+
     if [[ -n "${FAN_TEMP_FILE:-}" ]]; then
         temp="$(<"$FAN_TEMP_FILE")"
     elif cpu="$(cpu_temp)"; then
@@ -70,9 +81,11 @@ while true; do
     while (( target > 0 && temp < DOWN[target - 1] )); do target=$((target - 1)); done
 
     if (( target != level )); then
-        level=$target
-        set_fan "${SPEED[$level]}"
-        echo "temp=${temp}C -> level ${level} (${SPEED[$level]})"
+        # only remember the new level if the write worked, otherwise retry next tick
+        if set_fan "${SPEED[$target]}"; then
+            level=$target
+            echo "temp=${temp}C -> level ${level} (${SPEED[$level]})"
+        fi
     fi
     sleep "$INTERVAL"
 done
