@@ -14,13 +14,15 @@ cp -avf "/ctx/system_files"/. /
 
 # this installs packages from fedora repos
 dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
-dnf5 install -y --allowerasing tmux kitty krita keepassxc libreoffice libreoffice-langpack-en libreoffice-dict-en-US
+dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en
+
+# dnf5 install -y --enablerepo=terra --allowerasing something
 
 # terra packages (terra enabled for this command only)
-dnf5 install -y --allowerasing --enablerepo=terra discord prismlauncher
+dnf5 install -y --enablerepo=terra discord prismlauncher
 
 # this installs fonts from fedora and terra repos
-dnf5 install -y --allowerasing --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts
+dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts
 
 
 # enable services
