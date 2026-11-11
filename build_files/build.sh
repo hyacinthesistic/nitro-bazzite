@@ -19,14 +19,14 @@ dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en a
 # dnf5 install -y --enablerepo=terra --allowerasing something
 
 # terra packages (terra enabled for this command only)
-dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6
+dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 lact
 
 # this installs fonts from fedora and terra repos
 dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts
 
 
 # enable services
-systemctl enable tuned tuned-ppd earlyoom
+systemctl enable tuned tuned-ppd earlyoom lactd
 
 # Use a COPR Example:
 #
