@@ -114,11 +114,8 @@ exec "$@"
 EOF
 chmod 755 /usr/bin/zink-nvidia-run
 
-# gamemode user things
-# replace your username in between these groups
-#m $USER plugdev
-#m $USER gamemode
-cat > /usr/lib/sysusers.d/50-groups.conf <<'EOF'
-m clyde plugdev
-m clyde gamemode
-EOF
+# gamemode user things (not uncommenting one of these, its just for the next user `systemctl reboot`)
+# grep -E '^plugdev:' /usr/lib/group | sudo tee -a /etc/group 
+# grep -E '^gamemode:' /usr/lib/group | sudo tee -a /etc/group
+# sudo usermod -aG plugdev,gamemode $USER
+
