@@ -80,3 +80,37 @@ systemctl enable linuwu-fan-control.service
 
 # enable terra repo permanently
 dnf5 config-manager setopt terra.enabled=1
+
+# Wrapper scripts
+cat > /usr/bin/zink-run <<'EOF'
+#!/usr/bin/env bash
+export __GLX_VENDOR_LIBRARY_NAME=mesa
+export MESA_LOADER_DRIVER_OVERRIDE=zink
+export GALLIUM_DRIVER=zink
+exec "$@"
+EOF
+chmod 755 /usr/bin/zink-run
+
+cat > /usr/bin/prime-run <<'EOF'
+#!/usr/bin/env bash
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export __VK_LAYER_NV_optimus=NVIDIA_only
+exec "$@"
+EOF
+chmod 755 /usr/bin/prime-run
+
+cat > /usr/bin/zink-nvidia-run <<'EOF'
+#!/usr/bin/env bash
+export __GLX_VENDOR_LIBRARY_NAME=mesa
+export MESA_LOADER_DRIVER_OVERRIDE=zink
+export GALLIUM_DRIVER=zink
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __VK_LAYER_NV_optimus=NVIDIA_only
+export MESA_VK_DEVICE_SELECT=10de:25ad
+export MESA_VK_DEVICE_SELECT_FORCE_DEFAULT_DEVICE=1
+exec "$@"
+EOF
+chmod 755 /usr/bin/zink-nvidia-run
+
