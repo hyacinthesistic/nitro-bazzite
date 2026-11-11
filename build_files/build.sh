@@ -114,8 +114,11 @@ exec "$@"
 EOF
 chmod 755 /usr/bin/zink-nvidia-run
 
-# gamemode user things 
+# gamemode user things
+# replace your username in between these groups
+#m $USER plugdev
+#m $USER gamemode
 cat > /usr/lib/sysusers.d/50-groups.conf <<'EOF'
-m clyde plugdev #m $USER plugdev
-m clyde gamemode #m $USER gamemode
+m clyde plugdev
+m clyde gamemode
 EOF
