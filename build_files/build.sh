@@ -14,7 +14,7 @@ cp -avf "/ctx/system_files"/. /
 
 # this installs packages from fedora repos
 dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
-dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode
+dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode java-latest-openjdk
 
 # dnf5 install -y --enablerepo=terra --allowerasing something
 

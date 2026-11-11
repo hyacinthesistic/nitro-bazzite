@@ -39,12 +39,16 @@ cpu_temp() {
 }
 
 gpu_temp() {
-    local dev
+    local dev out
     for dev in /sys/bus/pci/devices/*; do
         [[ "$(<"$dev/vendor")" == "0x10de" && "$(<"$dev/class")" == 0x03* ]] || continue
         # don't wake a sleeping dGPU just to read its temperature
         [[ "$(<"$dev/power/runtime_status")" == "active" ]] || { echo 0; return 0; }
-        timeout 2 nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1
+        out="$(timeout 2 nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1)"
+        out="${out//[[:space:]]/}"
+        out="${out%%.*}"                      # drop decimals: 53.53 -> 53
+        [[ "$out" =~ ^[0-9]+$ ]] || out=0     # junk or empty -> 0
+        echo "$out"
         return 0
     done
     echo 0
@@ -69,9 +73,9 @@ while true; do
     last=$now
 
     if [[ -n "${FAN_TEMP_FILE:-}" ]]; then
-        temp="$(<"$FAN_TEMP_FILE")"
+        temp="$(<"$FAN_TEMP_FILE")"; temp="${temp%%.*}"
     elif cpu="$(cpu_temp)"; then
-        gpu="$(gpu_temp)"; gpu="${gpu:-0}"
+        gpu="$(gpu_temp)"; [[ "$gpu" =~ ^[0-9]+$ ]] || gpu=0
         temp=$(( cpu > gpu ? cpu : gpu ))
     else
         temp=999    # can't read the CPU sensor: fail safe, treat as hot
