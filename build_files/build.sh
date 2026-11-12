@@ -113,7 +113,24 @@ EOF
 chmod 755 /usr/bin/zink-nvidia-run
 
 # gamemode user things (not uncommenting one of these, its just for the next user `systemctl reboot`)
-# grep -E '^plugdev:' /usr/lib/group | sudo tee -a /etc/group 
+# grep -E '^plugdev:' /usr/lib/group | sudo tee -a /etc/group
 # grep -E '^gamemode:' /usr/lib/group | sudo tee -a /etc/group
 # sudo usermod -aG plugdev,gamemode $USER
+
+################### run greenboost make test ###################
+GB_COMMIT="6dc3c5988c5e0842ee426638feb2fb7abdf5e7e0"
+mkdir -p /tmp/greenboost
+curl -fsSL "https://gitlab.com/IsolatedOctopi/greenboost.git" | tar -xz -C /tmp/greenboost --strip-components=1
+cd /tmp/greenboost
+sed -i 's/-march=native -mtune=native/-march=x86-64-v3 -mtune=generic/g' Makefile
+
+make KVER="${KVER}" module
+make SHIM_INSTALL_PATH=/usr/lib64/libgreenboost_cuda.so shim audit vmm_override
+
+"/usr/src/kernels/${KVER}/scripts/sign-file" sha256 "${SIGN_KEY}" "${SIGN_CERT}" greenboost.ko
+install -Dm0644 greenboost.ko "/usr/lib/modules/${KVER}/extra/greenboost.ko"
+install -Dm0755 libgreenboost_cuda.so  /usr/lib64/libgreenboost_cuda.so
+install -Dm0755 libgreenboost_audit.so /usr/lib64/libgreenboost_audit.so
+depmod -a "${KVER}"
+cd / && rm -rf /tmp/greenboost
 
