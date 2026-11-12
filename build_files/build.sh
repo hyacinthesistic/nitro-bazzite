@@ -117,24 +117,24 @@ chmod 755 /usr/bin/zink-nvidia-run
 # grep -E '^gamemode:' /usr/lib/group | sudo tee -a /etc/group
 # sudo usermod -aG plugdev,gamemode $USER
 
-################### run greenboost make test ###################
-GB_COMMIT="6dc3c5988c5e0842ee426638feb2fb7abdf5e7e0"
-mkdir -p /tmp/greenboost
-curl -fsSL "https://gitlab.com/IsolatedOctopi/greenboost/-/archive/${GB_COMMIT}/greenboost-${GB_COMMIT}.tar.gz" | tar -xz -C /tmp/greenboost --strip-components=1
-cd /tmp/greenboost
-sed -i 's/-march=native -mtune=native/-march=x86-64-v3 -mtune=generic/g' Makefile
-grep -q 'march=x86-64-v3' Makefile || { echo "march sed did not apply"; exit 1; }
-! grep -qE '^[^#]*march=native' Makefile || { echo "march=native still present"; exit 1; }
-
-make KVER="${KVER}" module
-[[ "$(modinfo -F vermagic greenboost.ko)" == "${KVER} "* ]] || { echo "greenboost.ko built for the wrong kernel"; exit 1; }
-make -k KVER="${KVER}" SHIM_INSTALL_PATH=/usr/lib64/libgreenboost_cuda.so shim audit
-
-"/usr/src/kernels/${KVER}/scripts/sign-file" sha256 "${SIGN_KEY}" "${SIGN_CERT}" greenboost.ko
-install -Dm0644 greenboost.ko "/usr/lib/modules/${KVER}/extra/greenboost.ko"
-[[ -n "$(modinfo -F signer greenboost.ko)" ]] || { echo "greenboost.ko is not signed"; exit 1; }
-install -Dm0755 libgreenboost_cuda.so  /usr/lib64/libgreenboost_cuda.so
-install -Dm0755 libgreenboost_audit.so /usr/lib64/libgreenboost_audit.so
-depmod -a "${KVER}"
-cd / && rm -rf /tmp/greenboost
+# dont use greenboost yet (no reason)
+#GB_COMMIT="6dc3c5988c5e0842ee426638feb2fb7abdf5e7e0"
+#mkdir -p /tmp/greenboost
+#curl -fsSL "https://gitlab.com/IsolatedOctopi/greenboost/-/archive/${GB_COMMIT}/greenboost-${GB_COMMIT}.tar.gz" | tar -xz -C /tmp/#greenboost --strip-components=1
+#cd /tmp/greenboost
+#sed -i 's/-march=native -mtune=native/-march=x86-64-v3 -mtune=generic/g' Makefile
+#grep -q 'march=x86-64-v3' Makefile || { echo "march sed did not apply"; exit 1; }
+#! grep -qE '^[^#]*march=native' Makefile || { echo "march=native still present"; exit 1; }
+#
+#make KVER="${KVER}" module
+#[[ "$(modinfo -F vermagic greenboost.ko)" == "${KVER} "* ]] || { echo "greenboost.ko built for the wrong kernel"; exit 1; }
+#make -k KVER="${KVER}" SHIM_INSTALL_PATH=/usr/lib64/libgreenboost_cuda.so shim audit
+#
+#"/usr/src/kernels/${KVER}/scripts/sign-file" sha256 "${SIGN_KEY}" "${SIGN_CERT}" greenboost.ko
+#install -Dm0644 greenboost.ko "/usr/lib/modules/${KVER}/extra/greenboost.ko"
+#[[ -n "$(modinfo -F signer greenboost.ko)" ]] || { echo "greenboost.ko is not signed"; exit 1; }
+#install -Dm0755 libgreenboost_cuda.so  /usr/lib64/libgreenboost_cuda.so
+#install -Dm0755 libgreenboost_audit.so /usr/lib64/libgreenboost_audit.so
+#depmod -a "${KVER}"
+#cd / && rm -rf /tmp/greenboost
 
