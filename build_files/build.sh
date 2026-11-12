@@ -138,3 +138,6 @@ chmod 755 /usr/bin/zink-nvidia-run
 #depmod -a "${KVER}"
 #cd / && rm -rf /tmp/greenboost
 
+# update flatpak packages daily
+systemctl enable flatpak-update.timer
+
