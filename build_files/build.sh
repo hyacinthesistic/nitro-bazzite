@@ -120,7 +120,7 @@ chmod 755 /usr/bin/zink-nvidia-run
 ################### run greenboost make test ###################
 GB_COMMIT="6dc3c5988c5e0842ee426638feb2fb7abdf5e7e0"
 mkdir -p /tmp/greenboost
-curl -fsSL "https://gitlab.com/IsolatedOctopi/greenboost.git" | tar -xz -C /tmp/greenboost --strip-components=1
+curl -fsSL "https://gitlab.com/IsolatedOctopi/greenboost/-/archive/${GB_COMMIT}/greenboost-${GB_COMMIT}.tar.gz" | tar -xz -C /tmp/greenboost --strip-components=1
 cd /tmp/greenboost
 sed -i 's/-march=native -mtune=native/-march=x86-64-v3 -mtune=generic/g' Makefile
 
