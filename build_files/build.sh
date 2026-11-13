@@ -141,3 +141,6 @@ chmod 755 /usr/bin/zink-nvidia-run
 # update flatpak packages daily
 systemctl enable flatpak-update.timer
 
+# restart zram service to apply zram-generator configuration
+systemctl stop systemd-zram-setup@zram0.service
+systemctl start systemd-zram-setup@zram0.service
