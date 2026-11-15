@@ -17,14 +17,14 @@ dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
 dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode java-latest-openjdk kdenlive
 
 # installs packages from terra repos
-dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 lact
+dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6
 
 # this installs fonts from fedora or terra repos
 dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts
 
 
 # enable services
-systemctl enable tuned tuned-ppd earlyoom lactd
+systemctl enable tuned tuned-ppd earlyoom
 
 # Use a COPR Example:
 #
