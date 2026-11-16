@@ -1,0 +1,13 @@
+[Unit]
+Description=Set sched cgroup_mode to tasks
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RequiresMountsFor=/sys/kernel/debug
+ExecStart=/bin/sh -c 'echo tasks > /sys/kernel/debug/sched/cgroup_mode'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
