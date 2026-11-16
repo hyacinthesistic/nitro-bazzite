@@ -14,10 +14,10 @@ cp -avf "/ctx/system_files"/. /
 
 # this installs packages from fedora repos
 dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
-dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode java-latest-openjdk kdenlive irqbalance cava cheat cowsay opendoas 
+dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode java-latest-openjdk kdenlive irqbalance cava cheat cowsay opendoas ollama
 
 # installs packages from terra repos
-dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile
+dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile opencode-cli opencode-cli-bash-completion opencode-cli-fish-completion
 
 # this installs fonts from fedora or terra repos
 dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts
