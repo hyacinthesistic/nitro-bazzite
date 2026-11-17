@@ -20,7 +20,7 @@ dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en a
 dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile opencode-cli opencode-cli-bash-completion opencode-cli-fish-completion codex codex-bash-completion codex-fish-completion
 
 # this installs fonts from fedora or terra repos
-dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts
+dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts inconsolata-nerd-fonts inconsolatago-nerd-fonts inconsolatalgc-nerd-fonts
 
 # enable services
 systemctl enable tuned tuned-ppd earlyoom irqbalance sched-cgroup-mode
@@ -78,38 +78,13 @@ systemctl enable linuwu-fan-control.service
 # enable terra repo permanently
 dnf5 config-manager setopt terra.enabled=1
 
-# Wrapper scripts
-cat > /usr/bin/zink-run <<'EOF'
-#!/usr/bin/env bash
-export __GLX_VENDOR_LIBRARY_NAME=mesa
-export MESA_LOADER_DRIVER_OVERRIDE=zink
-export GALLIUM_DRIVER=zink
-exec "$@"
-EOF
-chmod 755 /usr/bin/zink-run
+# Wrapper scripts (moved)
+chmod 0755 /usr/bin/prime-run
+chmod 0755 /usr/bin/zink-nvidia-run
+chmod 0755 /usr/bin/zink-run
 
-cat > /usr/bin/prime-run <<'EOF'
-#!/usr/bin/env bash
-export __NV_PRIME_RENDER_OFFLOAD=1
-export __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0
-export __GLX_VENDOR_LIBRARY_NAME=nvidia
-export __VK_LAYER_NV_optimus=NVIDIA_only
-exec "$@"
-EOF
-chmod 755 /usr/bin/prime-run
-
-cat > /usr/bin/zink-nvidia-run <<'EOF'
-#!/usr/bin/env bash
-export __GLX_VENDOR_LIBRARY_NAME=mesa
-export MESA_LOADER_DRIVER_OVERRIDE=zink
-export GALLIUM_DRIVER=zink
-export __NV_PRIME_RENDER_OFFLOAD=1
-export __VK_LAYER_NV_optimus=NVIDIA_only
-export MESA_VK_DEVICE_SELECT=10de:25ad
-export MESA_VK_DEVICE_SELECT_FORCE_DEFAULT_DEVICE=1
-exec "$@"
-EOF
-chmod 755 /usr/bin/zink-nvidia-run
+# update flatpak packages daily
+systemctl enable flatpak-update.timer
 
 # gamemode user things (not uncommenting one of these, its just for the next user `systemctl reboot`)
 # grep -E '^plugdev:' /usr/lib/group | sudo tee -a /etc/group
@@ -136,6 +111,3 @@ chmod 755 /usr/bin/zink-nvidia-run
 #install -Dm0755 libgreenboost_audit.so /usr/lib64/libgreenboost_audit.so
 #depmod -a "${KVER}"
 #cd / && rm -rf /tmp/greenboost
-
-# update flatpak packages daily
-systemctl enable flatpak-update.timer
