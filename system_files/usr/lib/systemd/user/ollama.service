@@ -1,0 +1,11 @@
+[Unit]
+Description=Ollama
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ollama serve
+Restart=on-failure
+Environment="OLLAMA_KEEP_ALIVE=10m"
+
+[Install]
+WantedBy=default.target
