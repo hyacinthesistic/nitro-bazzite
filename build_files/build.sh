@@ -75,7 +75,7 @@ chmod 0755 /usr/libexec/linuwu-fan-control
 bash -n /usr/libexec/linuwu-fan-control
 systemctl enable linuwu-fan-control.service
 
-### llama.cpp prebuilt (CUDA 13.5 backend, needs a driver reporting CUDA >= 13.5, TESTING)
+### llama.cpp prebuilt (CUDA 13.5 backend, needs a driver reporting CUDA >= 13.5)
 LLAMA_VER="b12503"
 LLAMA_BASE="https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_VER}"
 LLAMA_DIR="/usr/lib/llama.cpp"
@@ -96,6 +96,15 @@ for f in "${LLAMA_DIR}"/llama*; do
         ln -sf "${f}" "/usr/bin/$(basename "${f}")"
     fi
 done
+
+### Ollama
+OLLAMA_VER="v0.40.16"
+OLLAMA_URL="https://github.com/ollama/ollama/releases/download/${OLLAMA_VER}/ollama-linux-amd64.tar.zst"
+
+curl -fsSL "${OLLAMA_URL}" | tar --zstd -x -C /usr
+
+[[ -x /usr/bin/ollama ]] || { echo "ollama missing"; exit 1; }
+[[ -d /usr/lib/ollama ]] || { echo "ollama libs missing"; exit 1; }
 
 # enable terra repo permanently
 dnf5 config-manager setopt terra.enabled=1
