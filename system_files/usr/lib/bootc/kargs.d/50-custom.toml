@@ -1,1 +1,1 @@
-kargs = ["zswap.enabled=0", "loglevel=7", "systemd.log_level=debug"]
+kargs = ["zswap.enabled=0", "loglevel=7", "systemd.log_level=debug", "bluetooth.disable_ertm=0"]
