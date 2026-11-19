@@ -14,7 +14,7 @@ cp -avf "/ctx/system_files"/. /
 
 # this installs packages from fedora repos
 dnf5 install -y --allowerasing tuned-gui tuned-ppd earlyoom
-dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode java-latest-openjdk kdenlive irqbalance cava cheat cowsay opendoas llama-cpp kdotool
+dnf5 install -y tmux kitty krita keepassxc libreoffice libreoffice-langpack-en audacious gamemode java-latest-openjdk kdenlive irqbalance cava cheat cowsay opendoas kdotool
 
 # installs packages from terra repos
 dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile opencode-cli opencode-cli-bash-completion opencode-cli-fish-completion codex codex-bash-completion codex-fish-completion
@@ -74,6 +74,28 @@ rm -rf /tmp/linuwu
 chmod 0755 /usr/libexec/linuwu-fan-control
 bash -n /usr/libexec/linuwu-fan-control
 systemctl enable linuwu-fan-control.service
+
+### llama.cpp prebuilt (CUDA 13.5 backend, needs a driver reporting CUDA >= 13.5, TESTING)
+LLAMA_VER="b12503"
+LLAMA_BASE="https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_VER}"
+LLAMA_DIR="/usr/lib/llama.cpp"
+
+mkdir -p "${LLAMA_DIR}"
+curl -fsSL "${LLAMA_BASE}/llama-${LLAMA_VER}-bin-ubuntu-cuda-13.5-x64.tar.gz" \
+    | tar -xz -C "${LLAMA_DIR}" --strip-components=1
+curl -fsSL "${LLAMA_BASE}/cudart-llama-${LLAMA_VER}-bin-ubuntu-cuda-13.5-x64.tar.gz" \
+    | tar -xz -C "${LLAMA_DIR}" --strip-components=1
+
+# fail the build instead of shipping a broken image
+[[ -x "${LLAMA_DIR}/llama-cli" ]]       || { echo "llama-cli missing"; exit 1; }
+[[ -f "${LLAMA_DIR}/libggml-cuda.so" ]] || { echo "CUDA backend missing"; exit 1; }
+[[ -f "${LLAMA_DIR}/libcudart.so.13" ]] || { echo "cudart missing"; exit 1; }
+
+for f in "${LLAMA_DIR}"/llama*; do
+    if [[ -f "${f}" && -x "${f}" ]]; then
+        ln -sf "${f}" "/usr/bin/$(basename "${f}")"
+    fi
+done
 
 # enable terra repo permanently
 dnf5 config-manager setopt terra.enabled=1
