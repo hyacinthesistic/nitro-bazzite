@@ -3,9 +3,14 @@ Description=Ollama
 After=network-online.target
 
 [Service]
+User=ollama
+Group=ollama
+StateDirectory=ollama
 ExecStart=/usr/bin/ollama serve
 Restart=on-failure
 Environment="OLLAMA_KEEP_ALIVE=10m"
+Environment="HOME=/var/lib/ollama"
+Environment="OLLAMA_HOST=127.0.0.1:11434"
 
 [Install]
 WantedBy=default.target
