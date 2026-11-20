@@ -76,26 +76,26 @@ bash -n /usr/libexec/linuwu-fan-control
 systemctl enable linuwu-fan-control.service
 
 ### llama.cpp prebuilt (CUDA 13.5 backend, needs a driver reporting CUDA >= 13.5)
-#LLAMA_VER="b12503"
-#LLAMA_BASE="https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_VER}"
-#LLAMA_DIR="/usr/lib/llama.cpp"
+LLAMA_VER="b12503"
+LLAMA_BASE="https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_VER}"
+LLAMA_DIR="/usr/lib/llama.cpp"
 
-#mkdir -p "${LLAMA_DIR}"
-#curl -fsSL "${LLAMA_BASE}/llama-${LLAMA_VER}-bin-ubuntu-cuda-13.5-x64.tar.gz" \
-#    | tar -xz -C "${LLAMA_DIR}" --strip-components=1
-#curl -fsSL "${LLAMA_BASE}/cudart-llama-${LLAMA_VER}-bin-ubuntu-cuda-13.5-x64.tar.gz" \
-#    | tar -xz -C "${LLAMA_DIR}" --strip-components=1
+mkdir -p "${LLAMA_DIR}"
+curl -fsSL "${LLAMA_BASE}/llama-${LLAMA_VER}-bin-ubuntu-cuda-13.5-x64.tar.gz" \
+    | tar -xz -C "${LLAMA_DIR}" --strip-components=1
+curl -fsSL "${LLAMA_BASE}/cudart-llama-${LLAMA_VER}-bin-ubuntu-cuda-13.5-x64.tar.gz" \
+    | tar -xz -C "${LLAMA_DIR}" --strip-components=1
 
 # fail the build instead of shipping a broken image
-#[[ -x "${LLAMA_DIR}/llama-cli" ]]       || { echo "llama-cli missing"; exit 1; }
-#[[ -f "${LLAMA_DIR}/libggml-cuda.so" ]] || { echo "CUDA backend missing"; exit 1; }
-#[[ -f "${LLAMA_DIR}/libcudart.so.13" ]] || { echo "cudart missing"; exit 1; }
+[[ -x "${LLAMA_DIR}/llama-cli" ]]       || { echo "llama-cli missing"; exit 1; }
+[[ -f "${LLAMA_DIR}/libggml-cuda.so" ]] || { echo "CUDA backend missing"; exit 1; }
+[[ -f "${LLAMA_DIR}/libcudart.so.13" ]] || { echo "cudart missing"; exit 1; }
 
-#for f in "${LLAMA_DIR}"/llama*; do
-#    if [[ -f "${f}" && -x "${f}" ]]; then
-#        ln -sf "${f}" "/usr/bin/$(basename "${f}")"
-#    fi
-#done
+for f in "${LLAMA_DIR}"/llama*; do
+    if [[ -f "${f}" && -x "${f}" ]]; then
+        ln -sf "${f}" "/usr/bin/$(basename "${f}")"
+    fi
+done
 
 ### Ollama
 OLLAMA_VER="v0.40.16"
