@@ -22,7 +22,7 @@ dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile
 # this installs fonts from fedora or terra repos
 dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts inconsolata-nerd-fonts inconsolatago-nerd-fonts inconsolatalgc-nerd-fonts
 
-flatpak uninstall firefox -y --delete-data
+flatpak uninstall org.mozilla.firefox -y --delete-data
 
 # Use a COPR Example:
 #
