@@ -22,7 +22,52 @@ dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile
 # this installs fonts from fedora or terra repos
 dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts inconsolata-nerd-fonts inconsolatago-nerd-fonts inconsolatalgc-nerd-fonts
 
-flatpak uninstall org.mozilla.firefox -y --delete-data
+# removes firefox from flatpak and self-disables the script itself next reboot
+LIST=/usr/share/ublue-os/bazzite/flatpak/install
+if [ -f "$LIST" ]; then
+  sed -i '/org\.mozilla\.firefox/d' "$LIST"
+fi
+
+cat > /usr/bin/remove-default-flatpaks <<'EOF'
+#!/usr/bin/env bash
+for app in org.mozilla.firefox; do
+  if flatpak list --system --app --columns=application | grep -qx "$app"; then
+    flatpak uninstall --system --noninteractive "$app"
+  fi
+done
+mkdir -p /var/lib/remove-default-flatpaks
+touch /var/lib/remove-default-flatpaks/done
+EOF
+chmod 755 /usr/bin/remove-default-flatpaks
+
+cat > /usr/lib/systemd/system/remove-default-flatpaks.service <<'EOF'
+[Unit]
+Description=Remove unwanted default flatpaks (one time)
+After=bazzite-flatpak-manager.service
+ConditionPathExists=!/var/lib/remove-default-flatpaks/done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/remove-default-flatpaks
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable remove-default-flatpaks.service
+
+cat > /usr/bin/remove-default-flatpaks <<'EOF'
+#!/usr/bin/env bash
+for app in org.mozilla.firefox; do
+  if flatpak list --system --app --columns=application | grep -qx "$app"; then
+    flatpak uninstall --system --noninteractive "$app"
+  fi
+done
+mkdir -p /var/lib/remove-default-flatpaks
+touch /var/lib/remove-default-flatpaks/done
+systemctl disable --no-reload remove-default-flatpaks.service || true
+EOF
+chmod 755 /usr/bin/remove-default-flatpaks
 
 # Use a COPR Example:
 #
