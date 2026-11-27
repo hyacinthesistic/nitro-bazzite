@@ -75,6 +75,9 @@ if rpm -qa 'terra-bluez*' | grep -q .; then
     exit 1
 fi
 
+# enable bluetooth bluez service
+systemctl enable bluetooth
+
 # removes firefox from flatpak and self-disables the script itself next reboot
 LIST=/usr/share/ublue-os/bazzite/flatpak/install
 if [ -f "$LIST" ]; then
