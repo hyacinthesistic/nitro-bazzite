@@ -22,6 +22,77 @@ dnf5 install -y --enablerepo=terra discord prismlauncher peazip-qt6 superfile op
 # this installs fonts from fedora or terra repos
 dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-source-code-pro-fonts adobe-source-code-vf-fonts adobe-source-sans-pro-fonts adobe-source-serif-pro-fonts inconsolata-nerd-fonts inconsolatago-nerd-fonts inconsolatalgc-nerd-fonts
 
+### Bluetooth: replace Terra's BlueZ 5.87 snapshot with Fedora 5.88+
+# Terra's terra-bluez 5.87 has the A2DP remote-SEP cache regression fixed by
+# BlueZ commit b7d71e5 in 5.88. It conflicts with Fedora's bluez package, so
+# swap the whole Terra BlueZ family in one transaction.
+for bluez_pkg in terra-bluez terra-bluez-cups terra-bluez-libs terra-bluez-obexd; do
+    dnf5 versionlock delete "${bluez_pkg}" || true
+done
+
+if rpm -qa 'terra-bluez*' | grep -q .; then
+    dnf5 swap -y --allowerasing terra-bluez bluez
+fi
+dnf5 install -y bluez-cups
+
+# Enforce a floor, not an exact pin, so later Fedora updates still apply.
+if ! grep -q '^# nitro-bazzite: BlueZ >= 5.88$' /etc/dnf/versionlock.toml; then
+    cat >> /etc/dnf/versionlock.toml <<'EOF'
+# nitro-bazzite: BlueZ >= 5.88
+[[packages]]
+name = "bluez"
+comment = "nitro-bazzite: A2DP remote SEP cache fix (b7d71e5)"
+[[packages.conditions]]
+key = "evr"
+comparator = ">="
+value = "5.88"
+
+[[packages]]
+name = "bluez-libs"
+comment = "nitro-bazzite: keep bluez-libs in sync with bluez"
+[[packages.conditions]]
+key = "evr"
+comparator = ">="
+value = "5.88"
+
+[[packages]]
+name = "bluez-cups"
+comment = "nitro-bazzite: keep bluez-cups in sync with bluez"
+[[packages.conditions]]
+key = "evr"
+comparator = ">="
+value = "5.88"
+
+[[packages]]
+name = "bluez-obexd"
+comment = "nitro-bazzite: keep bluez-obexd in sync with bluez"
+[[packages.conditions]]
+key = "evr"
+comparator = ">="
+value = "5.88"
+
+[[packages]]
+name = "terra-bluez*"
+comment = "nitro-bazzite: do not fall back to Terra's 5.87 git snapshot"
+[[packages.conditions]]
+key = "evr"
+comparator = ">="
+value = "5.88"
+EOF
+fi
+
+dnf5 upgrade -y bluez bluez-libs bluez-cups bluez-obexd
+
+BLUEZ_VERSION="$(rpm -q --qf '%{VERSION}\n' bluez)"
+if [[ "$(printf '%s\n5.88\n' "${BLUEZ_VERSION}" | sort -V | head -n1)" != "5.88" ]]; then
+    echo "BlueZ ${BLUEZ_VERSION} is older than 5.88; aborting"
+    exit 1
+fi
+if rpm -qa 'terra-bluez*' | grep -q .; then
+    echo "terra-bluez packages are still installed; aborting"
+    exit 1
+fi
+
 # removes firefox from flatpak and self-disables the script itself next reboot
 LIST=/usr/share/ublue-os/bazzite/flatpak/install
 if [ -f "$LIST" ]; then
