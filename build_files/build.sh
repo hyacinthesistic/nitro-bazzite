@@ -24,61 +24,43 @@ dnf5 install -y --enablerepo=terra rsms-inter-fonts meslo-nerd-fonts adobe-sourc
 
 ### Bluetooth: replace Terra's BlueZ 5.87 snapshot with Fedora 5.88+
 # Terra's terra-bluez 5.87 has the A2DP remote-SEP cache regression fixed by
-# BlueZ commit b7d71e5 in 5.88. It conflicts with Fedora's bluez package, so
-# swap the whole Terra BlueZ family in one transaction.
-for bluez_pkg in terra-bluez terra-bluez-cups terra-bluez-libs terra-bluez-obexd; do
-    dnf5 versionlock delete "${bluez_pkg}" || true
+# BlueZ commit b7d71e5 in 5.88. Terra's subpackages conflict with Fedora's,
+# so replace the whole family in a single transaction.
+mapfile -t terra_bluez_pkgs < <(rpm -qa --qf '%{NAME}\n' 'terra-bluez*' | sort -u)
+
+for pkg in "${terra_bluez_pkgs[@]}" bluez bluez-libs bluez-cups bluez-obexd; do
+    dnf5 versionlock delete "${pkg}" || true
 done
 
-if rpm -qa 'terra-bluez*' | grep -q .; then
-    dnf5 swap -y --allowerasing terra-bluez bluez
+dnf5 install -y --allowerasing bluez bluez-libs bluez-cups bluez-obexd
+
+# Safety net: remove any Terra leftovers the transaction didn't erase.
+mapfile -t leftover < <(rpm -qa --qf '%{NAME}\n' 'terra-bluez*' | sort -u)
+if (( ${#leftover[@]} )); then
+    dnf5 remove -y "${leftover[@]}"
 fi
-dnf5 install -y bluez-cups
 
 # Enforce a floor, not an exact pin, so later Fedora updates still apply.
-if ! grep -q '^# nitro-bazzite: BlueZ >= 5.88$' /etc/dnf/versionlock.toml; then
-    cat >> /etc/dnf/versionlock.toml <<'EOF'
-# nitro-bazzite: BlueZ >= 5.88
+VL=/etc/dnf/versionlock.toml
+if [[ ! -s "${VL}" ]]; then
+    echo 'version = "1.0"' > "${VL}"
+fi
+if ! grep -q '^# nitro-bazzite: BlueZ >= 5.88$' "${VL}"; then
+    {
+        echo '# nitro-bazzite: BlueZ >= 5.88'
+        for pkg in bluez bluez-libs bluez-cups bluez-obexd; do
+            cat <<EOF
+
 [[packages]]
-name = "bluez"
+name = "${pkg}"
 comment = "nitro-bazzite: A2DP remote SEP cache fix (b7d71e5)"
 [[packages.conditions]]
 key = "evr"
 comparator = ">="
 value = "5.88"
-
-[[packages]]
-name = "bluez-libs"
-comment = "nitro-bazzite: keep bluez-libs in sync with bluez"
-[[packages.conditions]]
-key = "evr"
-comparator = ">="
-value = "5.88"
-
-[[packages]]
-name = "bluez-cups"
-comment = "nitro-bazzite: keep bluez-cups in sync with bluez"
-[[packages.conditions]]
-key = "evr"
-comparator = ">="
-value = "5.88"
-
-[[packages]]
-name = "bluez-obexd"
-comment = "nitro-bazzite: keep bluez-obexd in sync with bluez"
-[[packages.conditions]]
-key = "evr"
-comparator = ">="
-value = "5.88"
-
-[[packages]]
-name = "terra-bluez*"
-comment = "nitro-bazzite: do not fall back to Terra's 5.87 git snapshot"
-[[packages.conditions]]
-key = "evr"
-comparator = ">="
-value = "5.88"
 EOF
+        done
+    } >> "${VL}"
 fi
 
 dnf5 upgrade -y bluez bluez-libs bluez-cups bluez-obexd
