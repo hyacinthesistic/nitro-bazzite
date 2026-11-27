@@ -75,13 +75,19 @@ if rpm -qa 'terra-bluez*' | grep -q .; then
     exit 1
 fi
 
-### Bluetooth: rebuild Fedora's BlueZ so it does NOT advertise "tx-timestamping"
+### Bluetooth: rebuild bluetoothd without advertising "tx-timestamping"
 # PipeWire only enables SO_TIMESTAMPING on the A2DP socket when BlueZ lists
 # "tx-timestamping" in org.bluez.Media1.SupportedFeatures. If BlueZ stops
 # advertising it, PipeWire skips the completion-report path that logs
 # "Missing completion reports for packet".
+# The patch only touches profiles/audio/media.c, which is compiled into the
+# bluetoothd daemon alone. So we build Fedora's bluez source with the patch and
+# swap ONLY that one binary. No RPM transaction, so nothing gets erased
+# (a transaction can pull out multilib bluez-libs.i686 and everything that
+# needs it, like pipewire-libs and Steam).
 # The .patch is generated from the real source at build time, and the build
 # aborts loudly if the code doesn't look like what we expect.
+
 BLUEZ_ORIG_PWD="${PWD}"
 BLUEZ_TOPDIR=/tmp/bluez-rpmbuild
 BLUEZ_SRCROOT=/tmp/bluez-src
@@ -97,6 +103,14 @@ dnf5 download -y --srpm bluez --enable-repo=fedora-source --enable-repo=updates-
   || dnf5 download -y --source bluez --enable-repo=fedora-source --enable-repo=updates-source
 SRPM="$(ls /tmp/bluez-*.src.rpm | head -n1)"
 [[ -n "${SRPM}" ]] || { echo "bluez source RPM not found; aborting"; exit 1; }
+
+# The source must match the installed bluez, or we'd swap in a mismatched daemon
+SRPM_VERSION="$(rpm -qp --qf '%{VERSION}\n' "${SRPM}")"
+INSTALLED_VERSION="$(rpm -q --qf '%{VERSION}\n' bluez)"
+if [[ "${SRPM_VERSION}" != "${INSTALLED_VERSION}" ]]; then
+    echo "bluez source ${SRPM_VERSION} != installed bluez ${INSTALLED_VERSION}; aborting"
+    exit 1
+fi
 rpm --define "_topdir ${BLUEZ_TOPDIR}" -ivh "${SRPM}"
 
 SPEC="${BLUEZ_TOPDIR}/SPECS/bluez.spec"
@@ -127,50 +141,31 @@ fi
 echo "---- generated patch ----"
 cat "${PATCH_FILE}"
 
-# 3. Add the patch to the spec and mark the release
+# 3. Add the patch to the spec
 if ! grep -q '^%autosetup' "${SPEC}"; then
     echo "bluez.spec doesn't use %autosetup, so Patch tags won't auto-apply; aborting"
     exit 1
 fi
 sed -i '0,/^Source0:/s//Patch9999: bluez-no-tx-timestamping.patch\nSource0:/' "${SPEC}"
-sed -i 's/^\(Release:.*\)$/\1.notxts/' "${SPEC}"
 
-# 4. Build (skip %check, we only changed one probe)
-rpmbuild --define "_topdir ${BLUEZ_TOPDIR}" --nocheck -bb "${SPEC}"
+# 4. Compile only (prep + build, no packaging)
+rpmbuild --define "_topdir ${BLUEZ_TOPDIR}" -bc "${SPEC}"
 
-# 5. Install the patched build over whatever bluez* packages are installed now
-mapfile -t BLUEZ_INSTALLED < <(rpm -qa --qf '%{NAME}\n' 'bluez*' | sort -u)
-BLUEZ_RPMS=()
-while IFS= read -r rpmfile; do
-    name="$(rpm -qp --qf '%{NAME}\n' "${rpmfile}")"
-    for installed in "${BLUEZ_INSTALLED[@]}"; do
-        if [[ "${name}" == "${installed}" ]]; then
-            BLUEZ_RPMS+=("${rpmfile}")
-        fi
-    done
-done < <(find "${BLUEZ_TOPDIR}/RPMS" -name '*.rpm')
+# 5. Swap ONLY the bluetoothd binary
+NEW_BLUETOOTHD=""
+while IFS= read -r candidate; do
+    if head -c4 "${candidate}" | grep -q 'ELF'; then
+        NEW_BLUETOOTHD="${candidate}"
+        break
+    fi
+done < <(find "${BLUEZ_TOPDIR}/BUILD" -name bluetoothd -type f)
+[[ -n "${NEW_BLUETOOTHD}" ]] || { echo "compiled bluetoothd binary not found; aborting"; exit 1; }
 
-if (( ${#BLUEZ_RPMS[@]} == 0 )); then
-    echo "No matching patched RPMs were built; aborting"
-    exit 1
-fi
-dnf5 install -y --allowerasing "${BLUEZ_RPMS[@]}"
+BLUETOOTHD="$(rpm -ql bluez | grep -E '/bluetoothd$' | head -n1)"
+[[ -x "${BLUETOOTHD}" ]] || { echo "installed bluetoothd not found; aborting"; exit 1; }
 
-# 6. Exact-lock the patched packages so a newer Fedora -N release doesn't
-#    silently replace them. (This replaces the earlier ">= 5.88" floor lock
-#    for these package names; delete that block if you use this one.)
-for pkg in "${BLUEZ_INSTALLED[@]}"; do
-    dnf5 versionlock delete "${pkg}" || true
-done
-dnf5 versionlock add "${BLUEZ_INSTALLED[@]}"
-
-# 7. Sanity checks
-rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}\n' bluez | grep -q 'notxts' \
-    || { echo "patched bluez is not installed; aborting"; exit 1; }
-if rpm -qa 'terra-bluez*' | grep -q .; then
-    echo "terra-bluez packages are still installed; aborting"
-    exit 1
-fi
+install -m0755 "${NEW_BLUETOOTHD}" "${BLUETOOTHD}"
+"${BLUETOOTHD}" --version
 
 rm -rf "${BLUEZ_TOPDIR}" "${BLUEZ_SRCROOT}" /tmp/bluez-*.src.rpm
 cd "${BLUEZ_ORIG_PWD}"
