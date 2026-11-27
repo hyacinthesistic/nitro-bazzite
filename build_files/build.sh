@@ -75,6 +75,110 @@ if rpm -qa 'terra-bluez*' | grep -q .; then
     exit 1
 fi
 
+### Bluetooth: rebuild Fedora's BlueZ so it does NOT advertise "tx-timestamping"
+# PipeWire only enables SO_TIMESTAMPING on the A2DP socket when BlueZ lists
+# "tx-timestamping" in org.bluez.Media1.SupportedFeatures. If BlueZ stops
+# advertising it, PipeWire skips the completion-report path that logs
+# "Missing completion reports for packet".
+# The .patch is generated from the real source at build time, and the build
+# aborts loudly if the code doesn't look like what we expect.
+BLUEZ_ORIG_PWD="${PWD}"
+BLUEZ_TOPDIR=/tmp/bluez-rpmbuild
+BLUEZ_SRCROOT=/tmp/bluez-src
+rm -rf "${BLUEZ_TOPDIR}" "${BLUEZ_SRCROOT}"
+mkdir -p "${BLUEZ_TOPDIR}"/{SOURCES,SPECS,SRPMS,RPMS,BUILD,BUILDROOT} "${BLUEZ_SRCROOT}"
+
+dnf5 install -y rpm-build rpmdevtools dnf5-plugins gcc make perl diffutils
+
+# 1. Get Fedora's bluez source RPM (source repos are disabled by default)
+cd /tmp
+rm -f /tmp/bluez-*.src.rpm
+dnf5 download -y --srpm bluez --enable-repo=fedora-source --enable-repo=updates-source \
+  || dnf5 download -y --source bluez --enable-repo=fedora-source --enable-repo=updates-source
+SRPM="$(ls /tmp/bluez-*.src.rpm | head -n1)"
+[[ -n "${SRPM}" ]] || { echo "bluez source RPM not found; aborting"; exit 1; }
+rpm --define "_topdir ${BLUEZ_TOPDIR}" -ivh "${SRPM}"
+
+SPEC="${BLUEZ_TOPDIR}/SPECS/bluez.spec"
+dnf5 builddep -y "${SPEC}"
+
+# 2. Generate the patch from the real source
+tar -xf "${BLUEZ_TOPDIR}"/SOURCES/bluez-*.tar.* -C "${BLUEZ_SRCROOT}"
+SRCDIR="$(find "${BLUEZ_SRCROOT}" -mindepth 1 -maxdepth 1 -type d | head -n1)"
+cp -a "${SRCDIR}" "${SRCDIR}.orig"
+
+MEDIA_C="${SRCDIR}/profiles/audio/media.c"
+if ! grep -q 'tx-timestamping' "${MEDIA_C}"; then
+    echo "tx-timestamping not found in media.c; BlueZ source changed, aborting"
+    exit 1
+fi
+
+# Make the feature probe always report "unsupported"
+perl -0pi -e 's/return adapter->so_timestamping & SOF_TIMESTAMPING_TX_SOFTWARE;/return false;/' "${MEDIA_C}"
+
+PATCH_FILE="${BLUEZ_TOPDIR}/SOURCES/bluez-no-tx-timestamping.patch"
+diff -u --label a/profiles/audio/media.c --label b/profiles/audio/media.c \
+    "${SRCDIR}.orig/profiles/audio/media.c" "${MEDIA_C}" > "${PATCH_FILE}" || true
+if [[ ! -s "${PATCH_FILE}" ]]; then
+    echo "Patch is empty: the expected 'return ...SOF_TIMESTAMPING_TX_SOFTWARE;' line wasn't found."
+    echo "Inspect probe_tx_timestamping() in profiles/audio/media.c and adjust the perl line."
+    exit 1
+fi
+echo "---- generated patch ----"
+cat "${PATCH_FILE}"
+
+# 3. Add the patch to the spec and mark the release
+if ! grep -q '^%autosetup' "${SPEC}"; then
+    echo "bluez.spec doesn't use %autosetup, so Patch tags won't auto-apply; aborting"
+    exit 1
+fi
+sed -i '0,/^Source0:/s//Patch9999: bluez-no-tx-timestamping.patch\nSource0:/' "${SPEC}"
+sed -i 's/^\(Release:.*\)$/\1.notxts/' "${SPEC}"
+
+# 4. Build (skip %check, we only changed one probe)
+rpmbuild --define "_topdir ${BLUEZ_TOPDIR}" --nocheck -bb "${SPEC}"
+
+# 5. Install the patched build over whatever bluez* packages are installed now
+mapfile -t BLUEZ_INSTALLED < <(rpm -qa --qf '%{NAME}\n' 'bluez*' | sort -u)
+BLUEZ_RPMS=()
+while IFS= read -r rpmfile; do
+    name="$(rpm -qp --qf '%{NAME}\n' "${rpmfile}")"
+    for installed in "${BLUEZ_INSTALLED[@]}"; do
+        if [[ "${name}" == "${installed}" ]]; then
+            BLUEZ_RPMS+=("${rpmfile}")
+        fi
+    done
+done < <(find "${BLUEZ_TOPDIR}/RPMS" -name '*.rpm')
+
+if (( ${#BLUEZ_RPMS[@]} == 0 )); then
+    echo "No matching patched RPMs were built; aborting"
+    exit 1
+fi
+dnf5 install -y --allowerasing "${BLUEZ_RPMS[@]}"
+
+# 6. Exact-lock the patched packages so a newer Fedora -N release doesn't
+#    silently replace them. (This replaces the earlier ">= 5.88" floor lock
+#    for these package names; delete that block if you use this one.)
+for pkg in "${BLUEZ_INSTALLED[@]}"; do
+    dnf5 versionlock delete "${pkg}" || true
+done
+dnf5 versionlock add "${BLUEZ_INSTALLED[@]}"
+
+# 7. Sanity checks
+rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}\n' bluez | grep -q 'notxts' \
+    || { echo "patched bluez is not installed; aborting"; exit 1; }
+if rpm -qa 'terra-bluez*' | grep -q .; then
+    echo "terra-bluez packages are still installed; aborting"
+    exit 1
+fi
+
+rm -rf "${BLUEZ_TOPDIR}" "${BLUEZ_SRCROOT}" /tmp/bluez-*.src.rpm
+cd "${BLUEZ_ORIG_PWD}"
+
+# After booting the new image, verify with:
+#   busctl get-property org.bluez /org/bluez/hci0 org.bluez.Media1 SupportedFeatures
+# Expected: "as 0"  (before the patch it printed: as 1 "tx-timestamping")
+
 # enable bluetooth bluez service
 systemctl enable bluetooth
 
